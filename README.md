@@ -8,8 +8,7 @@ This repository contains the training and test code for the paper  "***Dynamic V
 
 ## References
 Parts of our codes based on:
-* [hbdat/cvpr20_DAZLE](https://github.com/hbdat/cvpr20_DAZLE)
-* [zhangxuying1004/RSTNet](https://github.com/zhangxuying1004/RSTNet)
+* [FaisalAlamri0/ViT-ZSL](https://github.com/FaisalAlamri0/ViT-ZSL)
 
 ## Contact
 If you have any questions about codes, please don't hesitate to contact us by xl294487391@gmail.com.
