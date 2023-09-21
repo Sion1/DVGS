@@ -11,7 +11,7 @@ Parts of our codes based on:
 * [FaisalAlamri0/ViT-ZSL](https://github.com/FaisalAlamri0/ViT-ZSL)
 
 ## Citation:
-If you use ViT-ZSL in your research, please use the following BibTeX entry.
+If you use DVGS in your research, please use the following BibTeX entry.
 ```
 @article{zhou2023dynamic,
   title={Dynamic visual-guided selection for zero-shot learning},
