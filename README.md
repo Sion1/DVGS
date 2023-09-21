@@ -1,4 +1,4 @@
-# DVGS
+# DVGS (https://rdcu.be/dl5SF)
 
 
 This repository contains the training and test code for the paper  "***Dynamic Visual-guided Selection for Zero-Shot Learning***" accepted to the Journal of Supercomputing. 
