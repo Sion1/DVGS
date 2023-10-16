@@ -3,8 +3,8 @@ import torch
 import torchvision
 from torch import nn
 import torch.nn.functional as F
-from model.Resnet import Resnet
-from model.ViT import ViT
+from network.Resnet import Resnet
+from network.ViT import ViT
 from utils import matrix_visualize
 
 
@@ -14,7 +14,7 @@ class DVGS(nn.Module):
 
         self.args = args
 
-        ##### pretrained model version, default is pretrained on ImageNet21K
+        ##### pretrained network version, default is pretrained on ImageNet21K
         # Others variants of ViT can be used as well
         '''
         1 --- 'vit_small_patch16_224'
@@ -34,7 +34,7 @@ class DVGS(nn.Module):
         self.DRS = DynamicRegionSelection(v_embedding_dim, region_num, bias=False)
 
         #### dynamic attribute selection
-        self.DAS = DynamicRegionSelection(v_embedding_dim, attr_num, bias=True)
+        self.DAS = DynamicAttributeSelection(v_embedding_dim, attr_num, bias=True)
 
         #### attribute classifier
         self.attribute_classifier = nn.Linear(v_embedding_dim, attr_num, bias=False)
@@ -49,14 +49,13 @@ class DVGS(nn.Module):
         region_predicted_prototype = self.attribute_classifier(refined_region_feature)
         global_predicted_prototype = self.attribute_classifier(global_feature)
 
-        class_prototype = args.attr_mats
+        if args.is_training_DRS:
+            return region_predicted_prototype, global_predicted_prototype
+
+        class_prototype = args.attrs_mat
         refined_prototype = self.DAS(refined_region_feature, global_feature, class_prototype)
 
-        package = {'region_predicted_prototype': region_predicted_prototype,
-                   'global_predicted_prototype': global_predicted_prototype,
-                   'refined_prototype': refined_prototype}
-
-        return package
+        return region_predicted_prototype, global_predicted_prototype, refined_prototype
 
 
 class DynamicRegionSelection(nn.Module):
@@ -74,14 +73,16 @@ class DynamicRegionSelection(nn.Module):
 class DynamicAttributeSelection(nn.Module):
     def __init__(self, v_embedding, attr_num, bias=True):
         super(DynamicAttributeSelection, self).__init__()
-        self.relu = nn.ReLU
-        self.softmax = nn.Softmax
+        self.relu = nn.ReLU()
+        self.softmax = nn.Softmax()
         self.fc1 = nn.Linear(v_embedding, v_embedding // 2, bias=bias)
         self.fc2 = nn.Linear(v_embedding // 2, attr_num, bias=bias)
 
     def forward(self, refined_region_feature, global_feature, class_prototype):
         fused_feature = refined_region_feature.mean(dim=1) + global_feature
-        attr_weight = self.fc(fused_feature)
+        attr_weight = self.fc1(fused_feature)
+        attr_weight = self.relu(attr_weight)
+        attr_weight = self.fc2(attr_weight)
         attr_weight = self.softmax(attr_weight)
         attr_weight = attr_weight.unsqueeze(dim=1).repeat(1, class_prototype.shape[0], 1)
         class_prototype = class_prototype.unsqueeze(dim=0).repeat(global_feature.shape[0], 1, 1)

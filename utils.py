@@ -4,12 +4,14 @@ import torch.nn.functional as F
 import cv2
 import numpy as np
 import torch
+import matplotlib.pyplot as plt
 from PIL import Image
-# from pytorch-gradcam import ActivationsAndGradients
+from pytorch_grad_cam import ActivationsAndGradients
 from torch.utils.data import Dataset
 from gensim.models import KeyedVectors
 from gensim.test.utils import datapath
 import pandas as pd
+import scipy.io as sio
 
 
 class DataLoader(Dataset):
@@ -101,12 +103,10 @@ def remove_zero(attr_prototype, attr_weight):
 
 
 def get_w2v(dataset):
-    model_name = 'word2vec-google-news-300'  # best model
-    model = KeyedVectors.load_word2vec_format(
-        datapath(f'/media/user/F338-5CBE/XL/GoogleNews-vectors-negative300.bin.gz'),
-        binary=True)
+    model_name = 'word2vec-google-news-300'  # best network
+    model = KeyedVectors.load_word2vec_format(datapath(f'/home/c402/data/XL/GoogleNews-vectors-negative300.bin.gz'), binary=True)
     dim_w2v = 300
-    print('Done loading model')
+    print('Done loading network')
     replace_word = [('Auklet', 'auklet'), ('Frigatebird', 'Frigate bird'), ('Glaucous', 'glaucous'), ('Slaty', 'slaty'),
                     ('Violetear', 'violet ear'), ('Pomarine', 'pomarine'), ('Ovenbird', 'ovenbird'), ('Sayornis', 'sayornis'),
                     ('Geococcyx', 'geococcyx'), ('and', ' '), ('Waterthrush', 'water thrush'), ('cockaded', 'cockade'), ('Yellowthroat', 'yellow throat')]
@@ -135,6 +135,21 @@ def get_w2v(dataset):
         all_w2v.append(w2v[np.newaxis, :])
     all_w2v = np.concatenate(all_w2v, axis=0)
     return all_w2v
+
+
+img_num = 0
+def matrix_visualize(matrix_all):
+    global img_num
+    for i in range(matrix_all.shape[0]):
+        matrix = matrix_all[i].reshape(14, 14)
+        matrix = matrix.data.cpu().numpy()
+        plt.imshow(matrix)
+        # plt.colorbar()
+        path = './matrix_visualize/' + str(img_num) + '.png'
+        plt.savefig(path)
+        plt.close()
+        img_num += 1
+        # plt.show()
 
 
 class GradCAM:
@@ -317,5 +332,106 @@ def center_crop_img(img: np.ndarray, size: int):
     return img
 
 
+def extract_attr_w2v_CUB():
+    model = KeyedVectors.load_word2vec_format(datapath(f'/home/c402/data/XL/GoogleNews-vectors-negative300.bin.gz'), binary=True)
+    dim_w2v = 300
+    replace_word = [('spatulate', 'broad'), ('upperparts', 'upper parts'), ('grey', 'gray')]
+    path = '/home/c402/data/Dataset/CUB_200_2011/attributes.txt'
+    df = pd.read_csv(path, sep=' ', header=None, names=['idx', 'des'])
+    des = df['des'].values
+    new_des = [' '.join(i.split('_')) for i in des]
+    new_des = [' '.join(i.split('-')) for i in new_des]
+    new_des = [' '.join(i.split('::')) for i in new_des]
+    new_des = [i.split('(')[0] for i in new_des]
+    new_des = [i[4:] for i in new_des]
+    for pair in replace_word:
+        for idx, s in enumerate(new_des):
+            new_des[idx] = s.replace(pair[0], pair[1])
+    df['new_des'] = new_des
+    df.to_csv('/home/c402/data/XL/DDSP/attribute/CUB/new_des.csv')
+    all_w2v = []
+    for s in new_des:
+        words = s.split(' ')
+        if words[-1] == '':  # remove empty element
+            words = words[:-1]
+        w2v = np.zeros(dim_w2v)
+        for w in words:
+            try:
+                w2v += model[w]
+            except Exception as e:
+                print(e)
+        all_w2v.append(w2v[np.newaxis, :])
+    all_w2v = np.concatenate(all_w2v, axis=0)
+    return all_w2v
+
+
+def extract_attr_w2v_AWA2():
+    model = KeyedVectors.load_word2vec_format(datapath(f'/home/c402/data/XL/GoogleNews-vectors-negative300.bin.gz'), binary=True)
+    dim_w2v = 300
+    replace_word = [('newworld', 'new world'), ('oldworld', 'old world'), ('nestspot', 'nest spot'),
+                    ('toughskin', 'tough skin'),
+                    ('longleg', 'long leg'), ('chewteeth', 'chew teeth'), ('meatteeth', 'meat teeth'),
+                    ('strainteeth', 'strain teeth'),
+                    ('quadrapedal', 'quadrupedal')]
+    dataset = 'AWA2'
+    path = '/home/c402/data/Dataset/Animals_with_Attributes2/predicates.txt'
+    df = pd.read_csv(path, sep='\t', header=None, names=['idx', 'des'])
+    des = df['des'].values
+    for pair in replace_word:
+        for idx, s in enumerate(des):
+            des[idx] = s.replace(pair[0], pair[1])
+    df['new_des'] = des
+    df.to_csv('/home/c402/data/XL/DDSP/attribute/{}/new_des.csv'.format(dataset))
+    counter_err = 0
+    all_w2v = []
+    for s in des:
+        words = s.split(' ')
+        if words[-1] == '':  # remove empty element
+            words = words[:-1]
+        w2v = np.zeros(dim_w2v)
+        for w in words:
+            try:
+                w2v += model[w]
+            except Exception as e:
+                print(e)
+                counter_err += 1
+        all_w2v.append(w2v[np.newaxis, :])
+    all_w2v = np.concatenate(all_w2v, axis=0)
+    return all_w2v
+
+
+def extract_attr_w2v_SUN():
+    model = KeyedVectors.load_word2vec_format(datapath(f'/home/c402/data/XL/GoogleNews-vectors-negative300.bin.gz'), binary=True)
+    dim_w2v = 300
+    print('Done loading network')
+    replace_word = [('rockstone', 'rock stone'), ('dirtsoil', 'dirt soil'), ('man-made', 'man-made'),
+                    ('sunsunny', 'sun sunny'),
+                    ('electricindoor', 'electric indoor'), ('semi-enclosed', 'semi enclosed'), ('far-away', 'faraway')]
+    file_path = '/home/c402/data/Dataset/SUN/SUNAttributeDB/attributes.mat'
+    matcontent = sio.loadmat(file_path)
+    des = matcontent['attributes'].flatten()
+    df = pd.DataFrame()
+    new_des = [''.join(i.item().split('/')) for i in des]
+    for pair in replace_word:
+        for idx, s in enumerate(new_des):
+            new_des[idx] = s.replace(pair[0], pair[1])
+    df['new_des'] = new_des
+    df.to_csv('/home/c402/data/XL/DDSP/attribute/{}/new_des.csv'.format('SUN'))
+    all_w2v = []
+    for s in new_des:
+        words = s.split(' ')
+        if words[-1] == '':  # remove empty element
+            words = words[:-1]
+        w2v = np.zeros(dim_w2v)
+        for w in words:
+            try:
+                w2v += model[w]
+            except Exception as e:
+                print(e)
+        all_w2v.append(w2v[np.newaxis, :])
+    all_w2v = np.concatenate(all_w2v, axis=0)
+    return all_w2v
+
+
 if __name__ == '__main__':
-    print(get_w2v('CUB'))
+    print(extract_attr_w2v_CUB())
