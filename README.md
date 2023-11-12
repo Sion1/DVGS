@@ -5,6 +5,10 @@ This repository contains the training and test code for the paper  "***Dynamic V
 
 ![](figures/architecture.png)
 
+### Preparing Dataset and Model
+
+We provide trained models ([Google Drive](https://drive.google.com/drive/folders/1PQkewCqlEl8FbgFOboB7WqmGgIvN95x9?usp=sharing)) on three different datasets: [CUB](http://www.vision.caltech.edu/visipedia/CUB-200-2011.html), [SUN](http://cs.brown.edu/~gmpatter/sunattributes.html), [AWA2](http://cvml.ist.ac.at/AwA2/) in the CZSL/GZSL setting. 
+
 
 ## References
 Parts of our codes based on:
